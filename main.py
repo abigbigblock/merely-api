@@ -30,27 +30,26 @@ def validar_archivo():
     except Exception as e:
         print(f"Error al validar archivo Excel: {e}")
 
-# Descargar y validar el archivo al iniciar
 descargar_catalogo()
 
 @app.get("/")
 def root():
-    return {"message": "API Merely con validación de Excel activa."}
+    return {"message": "API Merely con manejo de errores activo."}
 
 @app.post("/buscar")
 async def buscar(request: Request):
-    data = await request.json()
-    sintoma = data.get("sintoma", "")
-    resultados = motor_optimizado(CATALOGO_ARCHIVO, sintoma)
-    texto = ""
-    for _, row in resultados.iterrows():
-        texto += f"Producto: {row.get('Nombre', 'N/A')}\n"
-        texto += f"Descripción: {row.get('Descripcion', 'N/A')}\n"
-        texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}\n"
-        texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'Desconocido')}\n"
-        texto += "-"*30 + "\n"
-    return {"respuesta": texto}
-
-@app.get("/informe")
-def obtener_informe():
-    return informe_interno()
+    try:
+        data = await request.json()
+        sintoma = data.get("sintoma", "")
+        resultados = motor_optimizado(CATALOGO_ARCHIVO, sintoma)
+        texto = ""
+        for _, row in resultados.iterrows():
+            texto += f"Producto: {row.get('Nombre', 'N/A')}\n"
+            texto += f"Descripción: {row.get('Descripcion', 'N/A')}\n"
+            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}\n"
+            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'Desconocido')}\n"
+            texto += "-"*30 + "\n"
+        return {"respuesta": texto}
+    except Exception as e:
+        print(f"ERROR interno en /buscar: {e}")
+        return {"respuesta": ""}
