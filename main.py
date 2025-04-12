@@ -41,7 +41,7 @@ async def buscar(request: Request):
     try:
         data = await request.json()
         sintoma = data.get("sintoma", "")
-        resultados = motor_optimizado(CATALOGO_ARCHIVO, sintoma)
+        resultados = motor_optimizado_csv(CATALOGO_ARCHIVO, sintoma)
         texto = ""
         for _, row in resultados.iterrows():
             texto += f"Producto: {row.get('Nombre', 'N/A')}\n"
