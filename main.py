@@ -2,7 +2,7 @@
 import pandas as pd
 import requests
 from fastapi import FastAPI, Request
-from motor_final_mejorado import motor_optimizado_csv, informe_interno
+from motor_final_csv import motor_optimizado_csv, informe_interno
 
 app = FastAPI()
 
