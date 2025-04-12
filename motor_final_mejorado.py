@@ -75,7 +75,7 @@ def motor_optimizado(ruta_excel, sintoma_entrada):
     clinicos = motor_clinico(df_catalogo.copy(), df_ingredientes, sintomas_expandidos)
 
     combinados = pd.concat([semanticos, clinicos], ignore_index=True)
-    combinados = combinados.drop_duplicates(subset=['Nombre'], keep='first')
+    combinados = combinados.drop_duplicates(subset=['Producto'], keep='first')
 
     if 'Puntaje' not in combinados.columns:
         combinados['Puntaje'] = 0
