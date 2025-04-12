@@ -16,15 +16,26 @@ def descargar_catalogo():
         with open(CATALOGO_ARCHIVO, "wb") as f:
             f.write(response.content)
         print("Archivo Excel descargado correctamente.")
+        validar_archivo()
     except Exception as e:
         print(f"Error al descargar el archivo Excel: {e}")
 
-# Descargar el archivo al iniciar la app
+def validar_archivo():
+    try:
+        df_cat = pd.read_excel(CATALOGO_ARCHIVO, sheet_name='Catálogo')
+        df_ing = pd.read_excel(CATALOGO_ARCHIVO, sheet_name='Ingredientes ')
+        print(f"Hojas cargadas: Catálogo ({len(df_cat)} filas), Ingredientes ({len(df_ing)} filas)")
+        print(f"Columnas en 'Catálogo': {list(df_cat.columns)}")
+        print(f"Columnas en 'Ingredientes': {list(df_ing.columns)}")
+    except Exception as e:
+        print(f"Error al validar archivo Excel: {e}")
+
+# Descargar y validar el archivo al iniciar
 descargar_catalogo()
 
 @app.get("/")
 def root():
-    return {"message": "API de búsqueda de Merely funcionando (con descarga automática)."}
+    return {"message": "API Merely con validación de Excel activa."}
 
 @app.post("/buscar")
 async def buscar(request: Request):
