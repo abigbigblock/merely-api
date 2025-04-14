@@ -27,3 +27,4 @@ async def buscar(request: Request):
     except Exception as e:
         print(f"Error interno en /buscar: {e}")
         return {"respuesta": ""}
+@app.get("/")
