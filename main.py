@@ -20,17 +20,23 @@ async def buscar(request: Request):
         data = await request.json()
         sintoma = data.get("sintoma", "")
         print(f"Síntoma recibido: {sintoma}")
-
+        
         sintoma_expandido = expandir_sintoma(sintoma)
-        resultados = motor_optimizado_csv(sintoma_expandido)
-        print(f"Bitácora de búsqueda: {informe_interno()}")
+        print(f"Síntoma expandido: {sintoma_expandido}")
 
+        df = pd.read_csv("catalogolisto.csv")
+        resultados = df[df["Recomendado para"].str.contains(sintoma_expandido, case=False, na=False)]
+        
         texto = ""
         for _, row in resultados.iterrows():
-            texto += f"Producto: {row.get('Producto', 'N/A')}\n"
-            texto += f"Descripción: {row.get('Descripcion', 'N/A')}\n"
-            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}\n"
-            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'N/A')}\n"
+            texto += f"Producto: {row.get('Producto', 'N/A')}
+"
+            texto += f"Descripción: {row.get('Descripcion', 'N/A')}
+"
+            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}
+"
+            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'N/A')}
+"
             texto += "-"*30 + "\n"
 
         return {"respuesta": texto}
