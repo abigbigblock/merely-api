@@ -4,7 +4,7 @@ import pandas as pd
 app = FastAPI()
 
 def expandir_sintoma(frase_usuario):
-    df = pd.read_csv("sintomas_frases_relacionadas(Hoja1).csv")
+    df = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
     frase_normalizada = frase_usuario.strip().lower()
 
     for _, fila in df.iterrows():
