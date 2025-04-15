@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Request
 import pandas as pd
 
@@ -20,13 +21,12 @@ async def buscar(request: Request):
         data = await request.json()
         sintoma = data.get("sintoma", "")
         print(f"Síntoma recibido: {sintoma}")
-        
-        sintoma_expandido = expandir_sintoma(sintoma)
-        print(f"Síntoma expandido: {sintoma_expandido}")
+        condicion = expandir_sintoma(sintoma)
+        print(f"Condición catalogada encontrada: {condicion}")
 
-        df = pd.read_csv("catalogolisto.csv")
-        resultados = df[df["Recomendado para"].str.contains(sintoma_expandido, case=False, na=False)]
-        
+        df_catalogo = pd.read_csv("catalogolisto.csv")
+        resultados = df_catalogo[df_catalogo["Recomendado para"].str.lower().str.contains(condicion, na=False)]
+
         texto = ""
         for _, row in resultados.iterrows():
             texto += f"Producto: {row.get('Producto', 'N/A')}
