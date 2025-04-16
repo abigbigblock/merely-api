@@ -20,22 +20,29 @@ async def buscar(request: Request):
     try:
         data = await request.json()
         sintoma = data.get("sintoma", "")
-        print(f"Síntoma recibido: {sintoma}")
-        condicion = expandir_sintoma(sintoma)
-        print(f"Condición catalogada encontrada: {condicion}")
+        print(f"Sintoma recibido: {sintoma}")
+        sintoma = expandir_sintoma(sintoma)
 
-        df_catalogo = pd.read_csv("catalogolisto.csv")
-        resultados = df_catalogo[df_catalogo["Recomendado para"].str.lower().str.contains(condicion, na=False)]
+        df = pd.read_csv("catalogolisto.csv")
+        resultados = df[df["Recomendado para"].str.lower().str.contains(sintoma)]
 
         texto = ""
         for _, row in resultados.iterrows():
-            texto += f"Producto: {row.get('Producto', 'N/A')}\n"
-            texto += f"Descripción: {row.get('Descripcion', 'N/A')}\n"
-            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}\n"
-            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'N/A')}\n"
+            texto += f"Producto: {row.get('Producto', 'N/A')}
+"
+            texto += f"Descripción: {row.get('Descripcion', 'N/A')}
+"
+            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}
+"
+            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'N/A')}
+"
             texto += "-"*30 + "\n"
 
         return {"respuesta": texto}
     except Exception as e:
         print(f"Error interno en /buscar: {e}")
         return {"respuesta": ""}
+
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
