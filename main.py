@@ -28,7 +28,7 @@ def expandir_sintoma(sintoma_usuario):
     coincidencias = []
 
     for _, row in df_sintomas.iterrows():
-        cond = normalizar(row["Condición catalogada"])
+        cond = normalizar(row["condición catalogada"])
         if sintoma_normalizado == cond or sintoma_normalizado in normalizar(row["Síntomas o frases relacionadas"]):
             coincidencias.append(cond)
     
