@@ -39,12 +39,20 @@ async def buscar(request: Request):
         data = await request.json()
         sintoma = data.get("sintoma", "")
         print(f"Sintoma recibido: {sintoma}")
-        sintoma_exp = expandir_sintoma(sintoma)
-        print(f"Sintoma expandido: {sintoma_exp}")
+        condiciones = expandir_sintoma(sintoma)
+        print(f"Condiciones relacionadas detectadas: {condiciones}")
 
         df_catalogo = pd.read_csv("catalogo.csv")
-        resultados = df_catalogo[df_catalogo["Recomendado para"].str.lower().str.contains(sintoma_exp, na=False)]
 
+        # Unimos las condiciones en una sola expresión regex separada por |
+       if condiciones:
+             patron_busqueda = "|".join(condiciones)
+             resultados = df_catalogo[df_catalogo["Recomendado para"].str.lower().str.contains(patron_busqueda, na=False)]
+       else:
+             resultados = pd.DataFrame()  # Vacío si no se detectó nada
+
+
+        
         texto = ""
         for _, row in resultados.iterrows():
             texto += f"Producto: {row.get('Producto', 'N/A')}\n"
