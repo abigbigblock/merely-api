@@ -33,6 +33,13 @@ async def buscar(request: Request):
         condiciones = expandir_sintoma(sintoma)
         print(f"Condiciones relacionadas detectadas: {condiciones}")
 
+        import os
+
+        if not os.path.exists("catalogo.csv"):
+            print("ERROR: El archivo catalogo.csv NO se encuentra en el entorno de ejecución.")
+        else:
+             print("ÉXITO: El archivo catalogo.csv SÍ fue encontrado.")
+
         df_catalogo = pd.read_csv("catalogo.csv")
 
         if condiciones:
