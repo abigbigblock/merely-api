@@ -23,7 +23,7 @@ async def buscar(request: Request):
         print(f"Síntoma recibido: {sintoma}")
         sintoma_exp = expandir_sintoma(sintoma)
 
-        df = pd.read_csv("catalogolisto.csv")
+        df = pd.read_csv("catalogo.csv")
         resultados = df[df["Recomendado para"].str.contains(sintoma_exp, case=False, na=False)]
 
         texto = ""
