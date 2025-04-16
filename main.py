@@ -11,16 +11,27 @@ def normalizar(frase):
         if unicodedata.category(c) != 'Mn'
     ).lower().strip()
 
+import unicodedata
+import pandas as pd
+
+def normalizar(frase):
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', frase)
+        if unicodedata.category(c) != 'Mn'
+    ).lower().strip()
+
 def expandir_sintoma(frase_usuario):
     df = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
     frase_normalizada = normalizar(frase_usuario)
+    
+    condiciones_detectadas = []
 
     for _, fila in df.iterrows():
         equivalentes = [normalizar(eq) for eq in str(fila["síntomas o frases relacionadas"]).split(",")]
         if any(eq in frase_normalizada for eq in equivalentes):
-            return normalizar(fila["condición catalogada"])
-    
-    return frase_normalizada
+            condiciones_detectadas.append(normalizar(fila["condición catalogada"]))
+
+    return list(set(condiciones_detectadas)) if condiciones_detectadas else []
 
 @app.post("/buscar")
 async def buscar(request: Request):
