@@ -5,30 +5,33 @@ import unicodedata
 
 app = FastAPI()
 
-def normalizar(frase):
+import unicodedata
+
+def normalizar(texto):
     return ''.join(
-        c for c in unicodedata.normalize('NFD', frase)
+        c for c in unicodedata.normalize('NFD', texto)
         if unicodedata.category(c) != 'Mn'
     ).lower().strip()
 
 def expandir_sintoma(frase_usuario):
     df = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
-    frase_normalizada = frase_usuario.strip().lower()
+    frase_normalizada = normalizar(frase_usuario)
 
     condiciones_detectadas = []
 
     for _, fila in df.iterrows():
-        equivalentes = str(fila["síntomas o frases relacionadas"]).lower().split(",")
-        if any(eq.strip() in frase_normalizada for eq in equivalentes):
-            condiciones_detectadas.append(fila["condición catalogada"].strip().lower())
+        equivalentes = str(fila["síntomas o frases relacionadas"]).split(",")
+        equivalentes = [normalizar(eq) for eq in equivalentes]
+        if any(eq in frase_normalizada for eq in equivalentes):
+            condiciones_detectadas.append(normalizar(fila["condición catalogada"]))
 
-    # Validación extra: ¿el usuario escribió directamente el nombre de una condición?
+    # También permitir coincidencias directas con nombre de la condición
     for _, fila in df.iterrows():
-        nombre_condicion = fila["condición catalogada"].strip().lower()
+        nombre_condicion = normalizar(fila["condición catalogada"])
         if nombre_condicion in frase_normalizada and nombre_condicion not in condiciones_detectadas:
             condiciones_detectadas.append(nombre_condicion)
 
-    return condiciones_detectadas
+    return list(set(condiciones_detectadas))
 
 @app.post("/buscar")
 async def buscar(request: Request):
