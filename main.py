@@ -13,15 +13,22 @@ def normalizar(frase):
 
 def expandir_sintoma(frase_usuario):
     df = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
-    frase_normalizada = normalizar(frase_usuario)
-    
+    frase_normalizada = frase_usuario.strip().lower()
+
     condiciones_detectadas = []
+
     for _, fila in df.iterrows():
-        equivalentes = [normalizar(eq) for eq in str(fila["síntomas o frases relacionadas"]).split(",")]
-        if any(eq in frase_normalizada for eq in equivalentes):
-            condiciones_detectadas.append(normalizar(fila["condición catalogada"]))
-    
-    return list(set(condiciones_detectadas)) if condiciones_detectadas else []
+        equivalentes = str(fila["síntomas o frases relacionadas"]).lower().split(",")
+        if any(eq.strip() in frase_normalizada for eq in equivalentes):
+            condiciones_detectadas.append(fila["condición catalogada"].strip().lower())
+
+    # Validación extra: ¿el usuario escribió directamente el nombre de una condición?
+    for _, fila in df.iterrows():
+        nombre_condicion = fila["condición catalogada"].strip().lower()
+        if nombre_condicion in frase_normalizada and nombre_condicion not in condiciones_detectadas:
+            condiciones_detectadas.append(nombre_condicion)
+
+    return condiciones_detectadas
 
 @app.post("/buscar")
 async def buscar(request: Request):
