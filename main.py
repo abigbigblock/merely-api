@@ -42,3 +42,6 @@ async def buscar(request: Request):
 @app.get("/")
 def health_check():
     return {"status": "ok"}
+@app.head("/")
+def health_check_head():
+    return {"status": "ok"}
