@@ -1,89 +1,101 @@
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
+import uvicorn
 import unicodedata
+import requests
 
 app = FastAPI()
 
-import unicodedata
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# Cargar catálogos
+df_catalogo = pd.read_csv("catalogo.csv")
+df_sintomas = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
+df_ingredientes = pd.read_csv("ingredientes.csv")
+
+# Expandir síntomas (sinónimos)
+def expandir_sintoma(sintoma_usuario):
+    sintoma_normalizado = normalizar(sintoma_usuario)
+    coincidencias = []
+
+    for _, row in df_sintomas.iterrows():
+        cond = normalizar(row["Condición catalogada"])
+        if sintoma_normalizado == cond or sintoma_normalizado in normalizar(row["Síntomas o frases relacionadas"]):
+            coincidencias.append(cond)
+    
+    return list(set(coincidencias + [sintoma_normalizado]))
+
+# Normalización para evitar errores por acentos
 def normalizar(texto):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(c) != 'Mn'
-    ).lower().strip()
+    if pd.isna(texto):
+        return ""
+    return unicodedata.normalize("NFKD", str(texto)).encode("ascii", "ignore").decode("utf-8").lower()
 
-def expandir_sintoma(frase_usuario):
-    df = pd.read_csv("sintomas_frases_relacionadas_limpio.csv")
-    frase_normalizada = normalizar(frase_usuario)
-
-    condiciones_detectadas = []
-
-    for _, fila in df.iterrows():
-        equivalentes = str(fila["síntomas o frases relacionadas"]).split(",")
-        equivalentes = [normalizar(eq) for eq in equivalentes]
-        if any(eq in frase_normalizada for eq in equivalentes):
-            condiciones_detectadas.append(normalizar(fila["condición catalogada"]))
-
-    # También permitir coincidencias directas con nombre de la condición
-    for _, fila in df.iterrows():
-        nombre_condicion = normalizar(fila["condición catalogada"])
-        if nombre_condicion in frase_normalizada and nombre_condicion not in condiciones_detectadas:
-            condiciones_detectadas.append(nombre_condicion)
-
-    return list(set(condiciones_detectadas))
-
+# Buscar productos relevantes
 @app.post("/buscar")
 async def buscar(request: Request):
-    try:
-        data = await request.json()
-        sintoma = data.get("sintoma", "")
-        print(f"Sintoma recibido: {sintoma}")
-        
-        condiciones = expandir_sintoma(sintoma)
-        print(f"Condiciones relacionadas detectadas: {condiciones}")
+    data = await request.json()
+    sintoma = data.get("sintoma", "")
+    sintomas_expandido = expandir_sintoma(sintoma)
 
-        import os
+    resultados = []
 
-        if not os.path.exists("catalogo.csv"):
-            print("ERROR: El archivo catalogo.csv NO se encuentra en el entorno de ejecución.")
-        else:
-             print("ÉXITO: El archivo catalogo.csv SÍ fue encontrado.")
+    for _, row in df_catalogo.iterrows():
+        puntaje = 0
+        motivos = []
 
-        df_catalogo = pd.read_csv("catalogo.csv")
+        # Revisión en descripción
+        desc = normalizar(row.get("Descripcion", ""))
+        if any(s in desc for s in sintomas_expandido):
+            puntaje += 3
+            motivos.append("Coincidencia en descripción")
 
-        if condiciones:
-            patron_busqueda = "|".join(condiciones)
-            resultados = df_catalogo[df_catalogo["Recomendado para"].str.lower().str.contains(patron_busqueda, na=False)]
+        # Revisión en campo 'Recomendado para'
+        recomendado = normalizar(row.get("Recomendado para", ""))
+        if any(s in recomendado for s in sintomas_expandido):
+            puntaje += 2
+            motivos.append("Coincidencia en campo recomendado")
 
-            def determinar_origen(recomendado):
-                for cond in condiciones:
-                    if cond in recomendado.lower():
-                        return "clínico"
-                return "semántico"
+        # Revisión en archivo de síntomas/frases
+        if any(s in recomendado or s in desc for s in sintomas_expandido):
+            puntaje += 1.5
+            motivos.append("Coincidencia con frase relacionada")
 
-            resultados["Origen"] = resultados["Recomendado para"].apply(determinar_origen)
-        else:
-            resultados = pd.DataFrame()
+        # Revisión por ingrediente
+        ingredientes_producto = df_ingredientes[df_ingredientes["Producto"] == row.get("Producto")]
+        ingredientes_relevantes = ingredientes_producto["Síntoma o Condición"].dropna().apply(normalizar).tolist()
 
-        texto = ""
-        for _, row in resultados.iterrows():
-            texto += f"Producto: {row.get('Producto', 'N/A')}\n"
-            texto += f"Descripción: {row.get('Descripcion', 'N/A')}\n"
-            texto += f"Uso sugerido: {row.get('Forma de uso', 'N/A')}\n"
-            texto += f"Puntaje: {row.get('Puntaje', 0)} | Origen: {row.get('Origen', 'N/A')}\n"
-            texto += "-" * 30 + "\n"
+        if any(s in sintomas_expandido for s in ingredientes_relevantes):
+            puntaje += 1
+            motivos.append("Ingrediente útil para el síntoma")
 
-        return {"respuesta": texto}
+        if puntaje > 0:
+            resultados.append({
+                "Producto": row.get("Producto", "N/A"),
+                "Descripcion": row.get("Descripcion", "N/A"),
+                "Forma de uso": row.get("Forma de uso", "N/A"),
+                "Puntaje": round(puntaje, 2),
+                "Motivos": ", ".join(motivos)
+            })
 
-    except Exception as e:
-        print(f"Error interno en /buscar: {e}")
-        return {"respuesta": ""}
+    # Ordenar por puntaje descendente
+    resultados = sorted(resultados, key=lambda x: x["Puntaje"], reverse=True)
+    return {"respuesta": resultados}
+
+# HEAD y GET para mantener vivo el render
+@app.get("/")
+async def head_check():
+    return {"message": "API de búsqueda de Merely funcionando."}
 
 @app.head("/")
-def health_check_head():
-    return {"status": "ok"}
-
-@app.get("/")
-def health_check_get():
-    return {"status": "ok"}
+async def head_status():
+    return {}
