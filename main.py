@@ -6,6 +6,26 @@ import uvicorn
 import unicodedata
 import requests
 
+import unicodedata
+import re
+
+def preprocesar_input(texto_usuario):
+    texto_sin_acentos = ''.join(
+        c for c in unicodedata.normalize('NFD', texto_usuario)
+        if unicodedata.category(c) != 'Mn'
+    )
+    texto_normalizado = texto_sin_acentos.lower()
+
+    frases_irrelevantes = [
+        r"dame algo para", r"me puedes dar algo para", r"que me recomiendas para",
+        r"tienes algo para", r"que sirve para", r"me das algo para", r"para tratar", r"algún producto para"
+    ]
+    for frase in frases_irrelevantes:
+        texto_normalizado = re.sub(frase, "", texto_normalizado).strip()
+
+    return texto_normalizado
+
+
 app = FastAPI()
 
 # CORS
@@ -24,6 +44,7 @@ df_ingredientes = pd.read_csv("ingredientes.csv")
 
 # Expandir síntomas (sinónimos)
 def expandir_sintoma(sintoma_usuario):
+    sintoma_usuario = preprocesar_input(sintoma_usuario)
     sintoma_normalizado = normalizar(sintoma_usuario)
     coincidencias = []
 
